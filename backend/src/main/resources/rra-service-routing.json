@@ -1,0 +1,114 @@
+[
+  {
+    "id": "srv_001",
+    "serviceName": "New Taxpayer Registration (TIN Issuance)",
+    "commonKeywords": ["register tin", "get tin", "new business", "company registration"],
+    "targetDepartment": "Domestic Taxes Department (DTD)",
+    "subUnit": "Taxpayer Registration Office",
+    "priority": "High"
+  },
+  {
+    "id": "srv_002",
+    "serviceName": "Value Added Tax (VAT) Declaration & Payment",
+    "commonKeywords": ["vat filing", "pay vat", "monthly declaration", "quarterly vat"],
+    "targetDepartment": "Domestic Taxes Department (DTD)",
+    "subUnit": "Large, SME, or Regional Office (Based on Business Category)",
+    "priority": "High"
+  },
+  {
+    "id": "srv_003",
+    "serviceName": "Electronic Billing Machine (EBM) Activation & Troubleshooting",
+    "commonKeywords": ["ebm machine", "ebm receipt error", "activate ebm", "vuba vuba", "ebm v2"],
+    "targetDepartment": "Domestic Taxes Department (DTD)",
+    "subUnit": "EBM Management Unit",
+    "priority": "Medium"
+  },
+  {
+    "id": "srv_004",
+    "serviceName": "Motor Vehicle Registration & Plate Issuance",
+    "commonKeywords": ["car plate", "motorcycle registration", "new number plate", "yellow card"],
+    "targetDepartment": "Domestic Taxes Department (DTD)",
+    "subUnit": "Motor Vehicle Registration Unit",
+    "priority": "High"
+  },
+  {
+    "id": "srv_005",
+    "serviceName": "Vehicle Ownership Transfer (Carte Jaune Transfer)",
+    "commonKeywords": ["buy car", "transfer ownership", "logbook transfer", "carte jaune change"],
+    "targetDepartment": "Domestic Taxes Department (DTD)",
+    "subUnit": "Motor Vehicle Registration Unit",
+    "priority": "Medium"
+  },
+  {
+    "id": "srv_006",
+    "serviceName": "Employment Taxes (PAYE & RSSB Statutory Filings)",
+    "commonKeywords": ["paye", "salary tax", "rssb declaration", "maternity leave fund"],
+    "targetDepartment": "Domestic Taxes Department (DTD)",
+    "subUnit": "Large or SME Office",
+    "priority": "Medium"
+  },
+  {
+    "id": "srv_007",
+    "serviceName": "Local & District Revenues (Decentralized Taxes)",
+    "commonKeywords": ["trading license", "imisoro", "patente", "property tax", "rental tax", "cleaning fees"],
+    "targetDepartment": "Domestic Taxes Department (DTD)",
+    "subUnit": "Regions & Decentralized Tax Office",
+    "priority": "High"
+  },
+  {
+    "id": "srv_008",
+    "serviceName": "Import & Export Cargo Clearance",
+    "commonKeywords": ["import goods", "export items", "resw", "single window", "customs clearing"],
+    "targetDepartment": "Customs Services Department",
+    "subUnit": "Customs Operations & Tariff Valuation",
+    "priority": "High"
+  },
+  {
+    "id": "srv_009",
+    "serviceName": "Bonded Warehouse & Transit Cargo Queries",
+    "commonKeywords": ["entrepôt", "bonded warehouse", "transit truck", "cargo tracking", "magerwa"],
+    "targetDepartment": "Customs Services Department",
+    "subUnit": "Cargo Management Unit",
+    "priority": "Medium"
+  },
+  {
+    "id": "srv_010",
+    "serviceName": "General Inquiries & In-Person Tax Consultation",
+    "commonKeywords": ["help desk", "how to pay", "tax advice", "walk in guidance", "customer care"],
+    "targetDepartment": "Taxpayer Services and Communication Division",
+    "subUnit": "Taxpayer Advisory Center / Call Center Support",
+    "priority": "Low"
+  },
+  {
+    "id": "srv_011",
+    "serviceName": "Taxpayer Education & Training Requests",
+    "commonKeywords": ["tax seminar", "sensitization training", "tax club", "request workshop"],
+    "targetDepartment": "Taxpayer Services and Communication Division",
+    "subUnit": "Tax Education & Public Awareness",
+    "priority": "Low"
+  },
+  {
+    "id": "srv_012",
+    "serviceName": "Tax Appeals & Amicable Settlement Claims",
+    "commonKeywords": ["dispute", "appeal tax", "re-assessment", "tax court", "amicable settlement"],
+    "targetDepartment": "Legal Services and Board Affairs Department",
+    "subUnit": "Legal & Litigation Division",
+    "priority": "High"
+  },
+  {
+    "id": "srv_013",
+    "serviceName": "Voluntary Tax Disclosures",
+    "commonKeywords": ["voluntary disclosure", "undeclared tax", "confession", "forgive penalty"],
+    "targetDepartment": "Strategic Intelligence and Investigation Department",
+    "subUnit": "Tax Investigation & Enforcement Unit",
+    "priority": "Medium"
+  },
+  {
+    "id": "srv_014",
+    "serviceName": "MyRRA Portal Credentials & IT Bug System Resolution",
+    "commonKeywords": ["portal password reset", "myrra down", "login error", "system sync failed"],
+    "targetDepartment": "IT and Digital Transformation Department",
+    "subUnit": "IT Service Desk / Systems Administration",
+    "priority": "High"
+  }
+]
