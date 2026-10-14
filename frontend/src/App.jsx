@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import rraLogo from './assets/rra-logo.png'
 import './App.css'
 
 const translations = {
   rw: {
     languageLabel: 'Ururimi',
-    navLabel: 'Ibikubiye ku rubuga',
+    workspaceLabel: 'IMIYOBORO',
     receptionTab: 'Aho bakirira abasora',
     feedbackTab: 'Tanga igitekerezo',
     receptionEyebrow: 'AKAZI KO KWAKIRA ABASORA',
@@ -15,11 +16,9 @@ const translations = {
     receptionTin: 'TIN y’umusoreshwa',
     tinPlaceholder: 'Imibare 9 ya TIN',
     tinHint: 'TIN igomba kuba igizwe n’imibare 9 gusa.',
-    serviceSearch: 'Shakisha serivisi',
     serviceSearchPlaceholder: 'Andika izina rya serivisi cyangwa ijambo rifasha kuyishaka',
     noServicesMatch: 'Nta serivisi ihuye n’ayo magambo wabonye.',
     serviceType: 'Serivisi umusoreshwa akeneye',
-    chooseService: 'Hitamo serivisi',
     reason: 'Ibisobanuro by’inyongera',
     reasonOptional: '(si ngombwa)',
     reasonPlaceholder: 'Andika mu magambo make icyo umusoreshwa akeneye',
@@ -39,13 +38,96 @@ const translations = {
     directTo: 'Yohereze kuri',
     serviceUnit: 'Ishami rito / aho ajya',
     nextTaxpayer: 'Kwakira undi musoreshwa',
+    useRequestForFeedback: 'Koresha iyi nimero mu gutanga igitekerezo',
+    feedbackIdHint: 'Andika nimero y’ubusabe iri hejuru, si nimero yo kwinjira/visite. Igitekerezo gitangwa serivisi imaze kurangira.',
     serviceErrorAfterCheckin: (visitId) => `Kwinjira byanditswe (nimero yo kwinjira ${visitId}), ariko nimero ya serivisi ntiyabonetse. Bika iyi nimero maze usabe ubufasha bw’umuyobozi wa sisitemu.`,
     missingDepartment: 'Iyi serivisi ntirashyirwa mu ishami. Bwira umuyobozi wa sisitemu kurihuza n’ishami.',
     receptionNote: 'Nimero y’ubusabe n’ishami bigaragazwa nyuma yo kwandika umusoreshwa.',
     categoryFetchFailed: 'Ntibyashobotse kureba serivisi zihari. Ongera ufungure uru rubuga.',
+    frontDeskTab: 'Front desk',
+    adminFeedbackTab: 'Isuzuma ry’ibitekerezo',
+    frontDeskEyebrow: 'GUKURIKIRANA UBUSABE',
+    frontDeskTitle: 'Kugenera abakozi ubusabe',
+    frontDeskIntro: 'Reba ubusabe bwageze mu mashami, ugenzure akazi kari kuri buri mukozi, hanyuma uyohereze ku mukozi ubishoboye.',
+    queueTitle: 'Ubusabe bw’abasora',
+    queueDescription: 'Shakisha ubusabe cyangwa uhitemo ishami kugira ngo uyobore akazi.',
+    refreshQueue: 'Ongera urebe',
+    queueLastUpdated: (time) => `Byavuguruwe: ${time}`,
+    liveUpdatesConnected: 'Ubusabe bushya buzagaragara ako kanya.',
+    liveUpdatesDisconnected: 'Uburyo bwo kwakira amakuru ako kanya ntibuhari. Koresha “Ongera urebe”.',
+    queueLoading: 'Turimo kuzana ubusabe…',
+    queueLoadError: 'Ntibyashobotse kuzana ubusabe. Ongera ugerageze.',
+    outdatedBackend: 'Backend iri kuri port 8082 ishaje; nta API y’urutonde rw’ubusabe ifite. Ongera uyitangize ukoresheje verisiyo nshya, hanyuma wongere ugerageze.',
+    queueSearchLabel: 'Shakisha ubusabe',
+    queueSearchPlaceholder: 'Andika TIN, nimero y’ubusabe, serivisi cyangwa umukozi',
+    departmentFilter: 'Amashami yose',
+    allStatuses: 'Status zose',
+    pendingStatus: 'Bitegereje',
+    inProgressStatus: 'Birimo gukorwa',
+    completedStatus: 'Byarangiye',
+    openRequests: 'Ubusabe butarangiye',
+    activeRequests: 'Ubusabe burimo gukorwa',
+    completedRequests: 'Ubusabe bwarangiye',
+    requestNumber: 'Ubusabe',
+    requestDetails: 'Ibisobanuro',
+    showRequestDetails: 'Reba ibisobanuro',
+    hideRequestDetails: 'Funga ibisobanuro',
+    newArrival: 'BUSHYA',
+    incomingUnassigned: 'Abasora bategereje guhabwa umukozi',
+    pendingAssignment: 'Bwakiriwe n’ishami — hitamo umukozi uzabukoraho.',
+    taxpayerTin: 'TIN',
+    serviceLabel: 'Serivisi',
+    arrivedLabel: 'Igihe bwageze',
+    assignedStaff: 'Umukozi ubiherewe',
+    staffNamePlaceholder: 'Andika izina ry’umukozi',
+    staffNameHint: 'Reba imibare y’akazi y’abakozi iri hejuru; ushobora no kwandika izina rishya.',
+    staffLoadTitle: 'Uko abakozi bahuze',
+    staffLoadEmpty: 'Nta mukozi urahabwa ubusabe.',
+    activeLoad: (count) => `${count} busabe burimo gukorwa`,
+    freeLoad: 'Nta busabe burimo gukorwa',
+    workloadNote: 'Iyi mibare ibara gusa ubusabe bwahawe abakozi muri iyi sisitemu; ntigaragaza indi mirimo cyangwa kalendari zabo.',
+    assignAndStart: 'Ohereza ku mukozi',
+    assigning: 'Birimo koherezwa…',
+    assignmentSuccess: (id, name) => `Ubusabe #${id} bwoherejwe kuri ${name}.`,
+    noQueueMatches: 'Nta busabe buhuye n’iyo shakisha.',
+    noRequestsYet: 'Nta busabe burandikwa. Ubusabe bushya buzakigaragara hano.',
+    statusLabel: 'Imiterere',
+    completionAction: 'Serivisi yarangiye',
+    returnToQueue: 'Subiza ku rutonde',
+    returnReasonLabel: 'Impamvu itararangira',
+    returnReasonPlaceholder: 'Urugero: Umusoreshwa azanye inyandiko ibura',
+    saveReturn: 'Bika, usubize ku rutonde',
+    cancel: 'Reka',
+    reasonRequired: 'Andika impamvu mbere yo gusubiza ubu busabe ku rutonde.',
+    completeSuccess: (id) => `Ubusabe #${id} bwarangiye. Umusoreshwa ashobora gutanga igitekerezo.`,
+    returnSuccess: (id) => `Ubusabe #${id} busubijwe ku rutonde kugira ngo bukurikiranwe.`,
+    queuePrivacy: 'Iyi dashboard ni iya prototype: nta kwinjira kw’abakozi cyangwa urutonde rw’abakozi rwemewe birimo. Shyiramo amazina nk’uko yemejwe n’ubuyobozi.',
+    feedbackAdminTitle: 'Isuzuma ry’ibitekerezo by’abasora',
+    feedbackAdminIntro: 'Reba amanota n’ibitekerezo byatanzwe, ubihuze na serivisi n’ishami byahawe.',
+    feedbackAdminRefresh: 'Ongera urebe',
+    feedbackAdminExport: 'Kuramo CSV',
+    feedbackAdminSearch: 'Shakisha igitekerezo',
+    feedbackAdminSearchPlaceholder: 'Nimero y’ubusabe, serivisi, ishami cyangwa amagambo',
+    feedbackAdminDepartmentFilter: 'Amashami yose',
+    feedbackAdminRating: 'Amanota yose',
+    feedbackAdminCount: 'Ibitekerezo byakiriwe',
+    feedbackAdminAverage: 'Impuzandengo y’amanota',
+    feedbackAdminLoading: 'Turimo kureba ibitekerezo…',
+    feedbackAdminLoadError: 'Ntibyashobotse kuzana ibitekerezo. Ongera ugerageze.',
+    outdatedFeedbackBackend: 'The backend on port 8082 is outdated and does not provide the request/feedback list API. Restart it with the latest code, then try again.',
+    feedbackAdminEmpty: 'Nta bitekerezo byaratangwa.',
+    feedbackAdminNoMatches: 'Nta bitekerezo bihuye n’ishakisha.',
+    feedbackAdminRequest: 'Ubusabe',
+    feedbackAdminService: 'Serivisi',
+    feedbackAdminDepartment: 'Ishami',
+    feedbackAdminRatingLabel: 'Amanota',
+    feedbackAdminComment: 'Igitekerezo',
+    feedbackAdminSubmitted: 'Igihe cyatangiwe',
+    showFeedbackDetails: 'Reba igitekerezo',
+    hideFeedbackDetails: 'Funga igitekerezo',
+    feedbackAdminPrivacy: 'Iyi screen igenewe abayobozi; prototype ntirimo kwinjira kwemewe cyangwa uburenganzira bw’abakoresha.',
     portal: 'URUBUGA RWA SERIVISI Z’ABASORESHA',
     tagline: 'IMISORO MU ITERAMBERE',
-    nav: ['Imisoro y’imbere mu gihugu', 'Serivisi za Gasutamo', 'Serivisi za EBM', 'Inyandiko', 'Rwanda Trade Portal'],
     eyebrow: 'SERIVISI Z’ABASORESHA ZA RRA',
     title: 'Tubwire uko twagufashije',
     intro: 'Ibitekerezo byawe bidufasha kunoza serivisi duha abasora. Tanga igitekerezo cyawe nyuma yo guhabwa serivisi.',
@@ -94,7 +176,7 @@ const translations = {
   },
   en: {
     languageLabel: 'Language',
-    navLabel: 'Main navigation',
+    workspaceLabel: 'WORKSPACE',
     receptionTab: 'Reception desk',
     feedbackTab: 'Give feedback',
     receptionEyebrow: 'TAXPAYER RECEPTION',
@@ -105,11 +187,9 @@ const translations = {
     receptionTin: 'Taxpayer TIN',
     tinPlaceholder: '9-digit TIN',
     tinHint: 'TIN must contain exactly 9 digits.',
-    serviceSearch: 'Search services',
     serviceSearchPlaceholder: 'Type a service name or keyword',
     noServicesMatch: 'No services match your search.',
     serviceType: 'Service requested',
-    chooseService: 'Choose a service',
     reason: 'Additional details',
     reasonOptional: '(optional)',
     reasonPlaceholder: 'Briefly describe what the taxpayer needs',
@@ -129,13 +209,96 @@ const translations = {
     directTo: 'Direct taxpayer to',
     serviceUnit: 'Destination sub-unit',
     nextTaxpayer: 'Check in another taxpayer',
+    useRequestForFeedback: 'Use this request for feedback',
+    feedbackIdHint: 'Enter the service request number shown above, not the visit number. Feedback is available after the service is completed.',
     serviceErrorAfterCheckin: (visitId) => `Check-in was recorded (visit number ${visitId}), but the service request number could not be created. Keep this visit number and contact the system administrator.`,
     missingDepartment: 'This service has not been assigned to a department. Ask the system administrator to configure it.',
     receptionNote: 'The service request number and destination department appear after check-in.',
     categoryFetchFailed: 'Available services could not be loaded. Please reload this page.',
+    frontDeskTab: 'Department front desk',
+    adminFeedbackTab: 'Feedback review',
+    frontDeskEyebrow: 'REQUEST MANAGEMENT',
+    frontDeskTitle: 'Assign requests to staff',
+    frontDeskIntro: 'Review requests routed to departments, check each staff member’s current workload, then assign the request to an available colleague.',
+    queueTitle: 'Taxpayer service requests',
+    queueDescription: 'Search requests or filter by department to organize the work queue.',
+    refreshQueue: 'Refresh',
+    queueLastUpdated: (time) => `Updated: ${time}`,
+    liveUpdatesConnected: 'New requests will appear as they arrive.',
+    liveUpdatesDisconnected: 'Live updates are disconnected. Use Refresh to check for new requests.',
+    queueLoading: 'Loading requests…',
+    queueLoadError: 'Requests could not be loaded. Please try again.',
+    outdatedBackend: 'The backend on port 8082 is outdated and does not provide the request list API. Restart it with the latest code, then try again.',
+    queueSearchLabel: 'Search by TIN or request',
+    queueSearchPlaceholder: 'Enter a TIN, request ID, service, or staff member',
+    departmentFilter: 'All departments',
+    allStatuses: 'All statuses',
+    pendingStatus: 'Pending',
+    inProgressStatus: 'In progress',
+    completedStatus: 'Completed',
+    openRequests: 'Open requests',
+    activeRequests: 'In progress',
+    completedRequests: 'Completed requests',
+    requestNumber: 'Request',
+    requestDetails: 'Details',
+    showRequestDetails: 'View details',
+    hideRequestDetails: 'Hide details',
+    newArrival: 'NEW',
+    incomingUnassigned: 'Taxpayers waiting for staff assignment',
+    pendingAssignment: 'Received by department — assign this request to a staff member.',
+    taxpayerTin: 'TIN',
+    serviceLabel: 'Service',
+    arrivedLabel: 'Received',
+    assignedStaff: 'Assigned staff member',
+    staffNamePlaceholder: 'Enter staff member name',
+    staffNameHint: 'Use the workload summary above, or enter a new staff name.',
+    staffLoadTitle: 'Staff workload',
+    staffLoadEmpty: 'No staff members have been assigned yet.',
+    activeLoad: (count) => `${count} active request${count === 1 ? '' : 's'}`,
+    freeLoad: 'No active requests',
+    workloadNote: 'This counts only requests assigned in this system; it cannot see other duties or staff calendars.',
+    assignAndStart: 'Assign and start',
+    assigning: 'Assigning…',
+    assignmentSuccess: (id, name) => `Request #${id} was assigned to ${name}.`,
+    noQueueMatches: 'No requests match your search.',
+    noRequestsYet: 'No requests have been recorded yet. New requests will appear here.',
+    statusLabel: 'Status',
+    completionAction: 'Mark service completed',
+    returnToQueue: 'Return to queue',
+    returnReasonLabel: 'Reason not completed',
+    returnReasonPlaceholder: 'For example: Taxpayer needs to bring a missing document',
+    saveReturn: 'Save and return to queue',
+    cancel: 'Cancel',
+    reasonRequired: 'Enter a reason before returning this request to the queue.',
+    completeSuccess: (id) => `Request #${id} is complete. The taxpayer can now submit feedback.`,
+    returnSuccess: (id) => `Request #${id} was returned to the queue for follow-up.`,
+    queuePrivacy: 'This is a prototype dashboard: staff sign-in and an approved staff directory are not connected. Use staff names confirmed by management.',
+    feedbackAdminTitle: 'Taxpayer feedback review',
+    feedbackAdminIntro: 'Review submitted ratings and comments, linked to their service requests and departments.',
+    feedbackAdminRefresh: 'Refresh',
+    feedbackAdminExport: 'Export CSV',
+    feedbackAdminSearch: 'Search feedback',
+    feedbackAdminSearchPlaceholder: 'Request ID, service, department, or comment',
+    feedbackAdminDepartmentFilter: 'All departments',
+    feedbackAdminRating: 'All ratings',
+    feedbackAdminCount: 'Feedback received',
+    feedbackAdminAverage: 'Average rating',
+    feedbackAdminLoading: 'Loading feedback…',
+    feedbackAdminLoadError: 'Feedback could not be loaded. Please try again.',
+    outdatedFeedbackBackend: 'The backend on port 8082 is outdated and does not provide the request/feedback list API. Restart it with the latest code, then try again.',
+    feedbackAdminEmpty: 'No feedback has been submitted yet.',
+    feedbackAdminNoMatches: 'No feedback matches your search.',
+    feedbackAdminRequest: 'Request',
+    feedbackAdminService: 'Service',
+    feedbackAdminDepartment: 'Department',
+    feedbackAdminRatingLabel: 'Rating',
+    feedbackAdminComment: 'Comment',
+    feedbackAdminSubmitted: 'Submitted',
+    showFeedbackDetails: 'View feedback',
+    hideFeedbackDetails: 'Hide feedback',
+    feedbackAdminPrivacy: 'This screen is intended for administrators; the prototype does not yet have authentication or user permissions.',
     portal: 'TAXPAYER SERVICE PORTAL',
     tagline: 'TAXES FOR GROWTH AND DEVELOPMENT',
-    nav: ['Domestic Taxes', 'Customs Services', 'EBM Services', 'Documents', 'Rwanda Trade Portal'],
     eyebrow: 'RRA TAXPAYER SERVICES',
     title: 'Tell us how we did',
     intro: 'Your feedback helps us improve the service we provide to every taxpayer. Share your experience after your service is completed.',
@@ -198,6 +361,8 @@ async function readApiResponse(response, text, errors = {}) {
       ? errors.notFound || text.serviceNotFound
       : response.status === 409
         ? errors.conflict || text.alreadySubmitted
+        : response.status === 405
+          ? errors.methodNotAllowed || errors.other || text.genericError
         : errors.other || text.genericError
     throw new Error(message)
   }
@@ -219,6 +384,8 @@ function App() {
   const [tin, setTin] = useState('')
   const [serviceSearch, setServiceSearch] = useState('')
   const [selectedCategoryId, setSelectedCategoryId] = useState('')
+  const [serviceMenuOpen, setServiceMenuOpen] = useState(false)
+  const [activeServiceIndex, setActiveServiceIndex] = useState(0)
   const [reason, setReason] = useState('')
   const [receptionError, setReceptionError] = useState('')
   const [isCreatingTicket, setIsCreatingTicket] = useState(false)
@@ -232,6 +399,29 @@ function App() {
   const [feedback, setFeedback] = useState(null)
   const [isVerifying, setIsVerifying] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [queueRequests, setQueueRequests] = useState([])
+  const [expandedRequestId, setExpandedRequestId] = useState(null)
+  const [newRequestIds, setNewRequestIds] = useState([])
+  const knownRequestIds = useRef(null)
+  const [queueLoading, setQueueLoading] = useState(false)
+  const [liveUpdatesConnected, setLiveUpdatesConnected] = useState(false)
+  const [queueLastUpdatedAt, setQueueLastUpdatedAt] = useState(null)
+  const [queueError, setQueueError] = useState('')
+  const [queueNotice, setQueueNotice] = useState('')
+  const [queueSearch, setQueueSearch] = useState('')
+  const [queueDepartment, setQueueDepartment] = useState('')
+  const [queueStatus, setQueueStatus] = useState('')
+  const [staffDrafts, setStaffDrafts] = useState({})
+  const [returnRequestId, setReturnRequestId] = useState(null)
+  const [returnReasons, setReturnReasons] = useState({})
+  const [queueActionId, setQueueActionId] = useState(null)
+  const [adminFeedback, setAdminFeedback] = useState([])
+  const [expandedFeedbackId, setExpandedFeedbackId] = useState(null)
+  const [adminFeedbackLoading, setAdminFeedbackLoading] = useState(false)
+  const [adminFeedbackError, setAdminFeedbackError] = useState('')
+  const [adminFeedbackSearch, setAdminFeedbackSearch] = useState('')
+  const [adminFeedbackDepartment, setAdminFeedbackDepartment] = useState('')
+  const [adminFeedbackRating, setAdminFeedbackRating] = useState('')
 
   const requestId = Number(serviceRequestId)
   const validRequestId =
@@ -240,14 +430,90 @@ function App() {
   const filteredCategories = categories.filter((category) => {
     const query = serviceSearch.trim().toLocaleLowerCase()
     if (!query) return true
-    const searchableValues = [category.name, ...(category.commonKeywords || [])]
+    const searchableValues = [
+      category.name,
+      category.defaultDepartmentName || '',
+      category.subUnit || '',
+      ...(category.commonKeywords || []),
+    ]
     return searchableValues.some((value) => value.toLocaleLowerCase().includes(query))
   })
+  const queueDepartments = useMemo(
+    () => [...new Set([
+      ...categories.map((category) => category.defaultDepartmentName),
+      ...queueRequests.map((request) => request.departmentName),
+    ].filter(Boolean))].sort(),
+    [categories, queueRequests],
+  )
+  const staffWorkload = useMemo(() => {
+    const workload = new Map()
+    queueRequests.forEach((request) => {
+      const staffName = request.assignedStaffName?.trim()
+      const departmentName = request.departmentName || ''
+      if (staffName && departmentName) {
+        const staffKey = `${departmentName}\u0000${staffName.toLocaleLowerCase()}`
+        const existing = workload.get(staffKey)
+        if (existing) {
+          if (request.status === 'IN_PROGRESS') existing[2] += 1
+        } else {
+          workload.set(staffKey, [departmentName, staffName, request.status === 'IN_PROGRESS' ? 1 : 0])
+        }
+      }
+    })
+    return [...workload.values()].sort(
+      (first, second) => first[2] - second[2] || first[1].localeCompare(second[1]),
+    )
+  }, [queueRequests])
+  const filteredQueueRequests = queueRequests.filter((request) => {
+    const query = queueSearch.trim().toLocaleLowerCase()
+    const matchesQuery = !query || [
+      request.id,
+      request.taxpayerTin,
+      request.serviceCategoryName,
+      request.departmentName,
+      request.assignedStaffName,
+      request.reason,
+    ].some((value) => String(value || '').toLocaleLowerCase().includes(query))
+    return matchesQuery
+      && (!queueDepartment || request.departmentName === queueDepartment)
+      && (!queueStatus || request.status === queueStatus)
+  })
+  const inProgressCount = queueRequests.filter((request) => request.status === 'IN_PROGRESS').length
+  const completedCount = queueRequests.filter((request) => request.status === 'COMPLETED').length
+  const unassignedCount = queueRequests.filter(
+    (request) => request.status === 'PENDING' && !request.assignedStaffName,
+  ).length
+  const feedbackDepartments = useMemo(
+    () => [...new Set(adminFeedback.map((item) => item.departmentName).filter(Boolean))].sort(),
+    [adminFeedback],
+  )
+  const filteredAdminFeedback = adminFeedback.filter((item) => {
+    const query = adminFeedbackSearch.trim().toLocaleLowerCase()
+    const matchesQuery = !query || [
+      item.serviceRequestId,
+      item.serviceCategoryName,
+      item.departmentName,
+      item.comment,
+    ].some((value) => String(value || '').toLocaleLowerCase().includes(query))
+    return matchesQuery
+      && (!adminFeedbackDepartment || item.departmentName === adminFeedbackDepartment)
+      && (!adminFeedbackRating || item.rating === Number(adminFeedbackRating))
+  })
+  const averageFeedbackRating = adminFeedback.length
+    ? (adminFeedback.reduce((total, item) => total + item.rating, 0) / adminFeedback.length).toFixed(1)
+    : '—'
 
   useEffect(() => {
     document.documentElement.lang = language
-    document.title = `${text.title} | RRA Taxpayer Services`
-  }, [language, text.title])
+    const pageTitle = activeView === 'reception'
+      ? text.receptionTitle
+      : activeView === 'frontDesk'
+        ? text.frontDeskTitle
+        : activeView === 'adminFeedback'
+          ? text.feedbackAdminTitle
+          : text.title
+    document.title = `${pageTitle} | RRA Taxpayer Services`
+  }, [activeView, language, text.title, text.receptionTitle, text.frontDeskTitle, text.feedbackAdminTitle])
 
   useEffect(() => {
     let isCurrent = true
@@ -283,6 +549,154 @@ function App() {
       isCurrent = false
     }
   }, [text])
+
+  const loadFrontDeskQueue = useCallback(async (silent = false) => {
+    if (!silent) setQueueLoading(true)
+    setQueueError('')
+    try {
+      const response = await fetch('/api/v1/service-requests')
+      const requests = await readApiResponse(response, text, {
+        methodNotAllowed: text.outdatedBackend,
+        other: text.queueLoadError,
+      })
+      if (knownRequestIds.current !== null) {
+        const knownIds = knownRequestIds.current
+        const arrivingIds = requests
+          .filter((request) => request.status === 'PENDING' && !knownIds.has(request.id))
+          .map((request) => request.id)
+        if (arrivingIds.length > 0) {
+          setNewRequestIds((current) => [...new Set([...current, ...arrivingIds])])
+        }
+      }
+      knownRequestIds.current = new Set(requests.map((request) => request.id))
+      setQueueRequests(requests)
+      setQueueLastUpdatedAt(new Date())
+    } catch (error) {
+      setQueueError(error instanceof Error ? error.message : text.queueLoadError)
+    } finally {
+      if (!silent) setQueueLoading(false)
+    }
+  }, [text])
+
+  const loadAdminFeedback = useCallback(async () => {
+    setAdminFeedbackLoading(true)
+    setAdminFeedbackError('')
+    try {
+      const response = await fetch('/api/v1/feedback')
+      const items = await readApiResponse(response, text, {
+        methodNotAllowed: text.outdatedFeedbackBackend,
+        other: text.feedbackAdminLoadError,
+      })
+      setAdminFeedback(items)
+    } catch (error) {
+      setAdminFeedbackError(error instanceof Error ? error.message : text.feedbackAdminLoadError)
+    } finally {
+      setAdminFeedbackLoading(false)
+    }
+  }, [text])
+
+  function exportAdminFeedback() {
+    const escapeCsv = (value) => `"${String(value ?? '').replaceAll('"', '""')}"`
+    const rows = [
+      ['Request ID', 'Service', 'Department', 'Rating', 'Comment', 'Submitted at'],
+      ...filteredAdminFeedback.map((item) => [
+        item.serviceRequestId,
+        item.serviceCategoryName,
+        item.departmentName,
+        item.rating,
+        item.comment,
+        item.submittedAt,
+      ]),
+    ]
+    const csv = rows.map((row) => row.map(escapeCsv).join(',')).join('\r\n')
+    const file = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8' })
+    const downloadUrl = URL.createObjectURL(file)
+    const link = document.createElement('a')
+    link.href = downloadUrl
+    link.download = 'taxpayer-feedback.csv'
+    link.click()
+    URL.revokeObjectURL(downloadUrl)
+  }
+
+  useEffect(() => {
+    if (activeView !== 'frontDesk') return undefined
+
+    const eventSource = new EventSource('/api/v1/service-requests/events')
+    eventSource.onopen = () => {
+      setLiveUpdatesConnected(true)
+      loadFrontDeskQueue(true)
+    }
+    eventSource.addEventListener('service-request-updated', () => loadFrontDeskQueue(true))
+    eventSource.onerror = () => setLiveUpdatesConnected(false)
+
+    return () => {
+      eventSource.close()
+      setLiveUpdatesConnected(false)
+    }
+  }, [activeView, loadFrontDeskQueue])
+
+  async function assignRequest(request) {
+    const staffName = (staffDrafts[request.id] || request.assignedStaffName || '').trim()
+    setQueueError('')
+    setQueueNotice('')
+    if (!staffName) {
+      setQueueError(text.staffNamePlaceholder)
+      return
+    }
+    setQueueActionId(request.id)
+    try {
+      const response = await fetch(`/api/v1/service-requests/${request.id}/assignment`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ staffName }),
+      })
+      await readApiResponse(response, text, {
+        conflict: text.queueLoadError,
+        other: text.queueLoadError,
+      })
+      setNewRequestIds((current) => current.filter((id) => id !== request.id))
+      setQueueNotice(text.assignmentSuccess(request.id, staffName))
+      setStaffDrafts((current) => ({ ...current, [request.id]: staffName }))
+      await loadFrontDeskQueue()
+    } catch (error) {
+      setQueueError(error instanceof TypeError ? text.networkError : error instanceof Error ? error.message : text.queueLoadError)
+    } finally {
+      setQueueActionId(null)
+    }
+  }
+
+  async function recordQueueOutcome(request, status, nonCompletionReason = null) {
+    setQueueError('')
+    setQueueNotice('')
+    if (status === 'NOT_COMPLETED' && !nonCompletionReason?.trim()) {
+      setQueueError(text.reasonRequired)
+      return
+    }
+    setQueueActionId(request.id)
+    try {
+      const response = await fetch(`/api/v1/service-requests/${request.id}/outcome`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status, nonCompletionReason }),
+      })
+      await readApiResponse(response, text, {
+        conflict: text.queueLoadError,
+        other: text.queueLoadError,
+      })
+      if (status === 'COMPLETED') {
+        setQueueNotice(text.completeSuccess(request.id))
+      } else {
+        setQueueNotice(text.returnSuccess(request.id))
+        setReturnRequestId(null)
+        setReturnReasons((current) => ({ ...current, [request.id]: '' }))
+      }
+      await loadFrontDeskQueue()
+    } catch (error) {
+      setQueueError(error instanceof TypeError ? text.networkError : error instanceof Error ? error.message : text.queueLoadError)
+    } finally {
+      setQueueActionId(null)
+    }
+  }
 
   function changeLanguage(nextLanguage) {
     setLanguage(nextLanguage)
@@ -399,9 +813,44 @@ function App() {
     setTin('')
     setServiceSearch('')
     setSelectedCategoryId('')
+    setServiceMenuOpen(false)
+    setActiveServiceIndex(0)
     setReason('')
     setReceptionError('')
     setCreatedTicket(null)
+  }
+
+  function selectServiceCategory(category) {
+    const label = [
+      category.name,
+      category.defaultDepartmentName,
+      category.subUnit,
+    ].filter(Boolean).join(' — ')
+    setSelectedCategoryId(String(category.id))
+    setServiceSearch(label)
+    setServiceMenuOpen(false)
+    setActiveServiceIndex(0)
+    setReceptionError('')
+  }
+
+  function openServicePicker() {
+    if (selectedCategoryId) {
+      setServiceSearch('')
+      setSelectedCategoryId('')
+      setActiveServiceIndex(0)
+    }
+    setServiceMenuOpen(true)
+  }
+
+  function useTicketForFeedback() {
+    setServiceRequestId(String(createdTicket.serviceRequest.id))
+    setVerifiedRequest(null)
+    setRating('')
+    setComment('')
+    setVerificationError('')
+    setSubmissionError('')
+    setFeedback(null)
+    setActiveView('feedback')
   }
 
   async function createReceptionTicket(event) {
@@ -487,13 +936,10 @@ function App() {
 
   return (
     <div className="app-shell" lang={language}>
-      <div className="top-rule" />
       <header className="site-header">
         <div className="masthead">
           <a className="brand" href="/" aria-label="Rwanda Revenue Authority home">
-            <span className="brand-mark" aria-hidden="true">
-              <span>R</span>
-            </span>
+            <img className="brand-logo" src={rraLogo} alt="" />
             <span className="brand-name">
               <strong><span>RWANDA REVENUE</span> AUTHORITY</strong>
               <span>{text.tagline}</span>
@@ -521,59 +967,263 @@ function App() {
             </div>
           </div>
         </div>
-        <nav className="primary-nav" aria-label={text.navLabel}>
-          {text.nav.map((item, index) => (
-            <span className={index === 0 ? 'active' : ''} key={item}>{item}</span>
-          ))}
-        </nav>
       </header>
 
-      <main>
-        <div className="workspace-tabs" role="group" aria-label={text.portal}>
-          <button
-            className={activeView === 'reception' ? 'active' : ''}
-            type="button"
-            aria-pressed={activeView === 'reception'}
-            onClick={() => setActiveView('reception')}
-          >
-            {text.receptionTab}
-          </button>
-          <button
-            className={activeView === 'feedback' ? 'active' : ''}
-            type="button"
-            aria-pressed={activeView === 'feedback'}
-            onClick={() => setActiveView('feedback')}
-          >
-            {text.feedbackTab}
-          </button>
-        </div>
+      <div className="workspace-layout">
+        <aside className="workflow-sidebar">
+          <p className="sidebar-label">{text.workspaceLabel}</p>
+          <nav className="workflow-nav" aria-label={text.workspaceLabel}>
+            <button
+              className={activeView === 'reception' ? 'active' : ''}
+              type="button"
+              aria-current={activeView === 'reception' ? 'page' : undefined}
+              onClick={() => setActiveView('reception')}
+            >
+              <span className="workflow-nav-icon" aria-hidden="true">01</span>
+              <span>{text.receptionTab}</span>
+            </button>
+            <button
+              className={activeView === 'frontDesk' ? 'active' : ''}
+              type="button"
+              aria-current={activeView === 'frontDesk' ? 'page' : undefined}
+              onClick={() => {
+                setActiveView('frontDesk')
+                loadFrontDeskQueue()
+              }}
+            >
+              <span className="workflow-nav-icon" aria-hidden="true">02</span>
+              <span>{text.frontDeskTab}</span>
+            </button>
+            <button
+              className={activeView === 'adminFeedback' ? 'active' : ''}
+              type="button"
+              aria-current={activeView === 'adminFeedback' ? 'page' : undefined}
+              onClick={() => {
+                setActiveView('adminFeedback')
+                loadAdminFeedback()
+              }}
+            >
+              <span className="workflow-nav-icon" aria-hidden="true">03</span>
+              <span>{text.adminFeedbackTab}</span>
+            </button>
+            <button
+              className={activeView === 'feedback' ? 'active' : ''}
+              type="button"
+              aria-current={activeView === 'feedback' ? 'page' : undefined}
+              onClick={() => setActiveView('feedback')}
+            >
+              <span className="workflow-nav-icon" aria-hidden="true">04</span>
+              <span>{text.feedbackTab}</span>
+            </button>
+          </nav>
+        </aside>
 
+      <main>
         <section className="intro" aria-labelledby="page-title">
           <div className="intro-copy">
             <p className="eyebrow">
-              {activeView === 'reception' ? text.receptionEyebrow : text.eyebrow}
+              {activeView === 'reception'
+                ? text.receptionEyebrow
+                : activeView === 'frontDesk'
+                  ? text.frontDeskEyebrow
+                  : activeView === 'adminFeedback'
+                    ? text.adminFeedbackTab.toLocaleUpperCase()
+                  : text.eyebrow}
             </p>
             <h1 id="page-title">
-              {activeView === 'reception' ? text.receptionTitle : text.title}
+              {activeView === 'reception'
+                ? text.receptionTitle
+                : activeView === 'frontDesk'
+                  ? text.frontDeskTitle
+                  : activeView === 'adminFeedback'
+                    ? text.feedbackAdminTitle
+                  : text.title}
             </h1>
-            <p>{activeView === 'reception' ? text.receptionIntro : text.intro}</p>
-          </div>
-          <div className="intro-art" aria-hidden="true">
-            <div className="art-document">
-              <span />
-              <span />
-              <span />
-              <b>✓</b>
-            </div>
-            <div className="art-coin coin-one">RWF</div>
-            <div className="art-coin coin-two">★</div>
-            <div className="art-sun" />
+            <p>{activeView === 'reception'
+              ? text.receptionIntro
+              : activeView === 'frontDesk'
+                ? text.frontDeskIntro
+                : activeView === 'adminFeedback'
+                  ? text.feedbackAdminIntro
+                : text.intro}</p>
           </div>
         </section>
 
-        {activeView === 'reception' ? (
-          <section className="feedback-card reception-card" aria-label={text.receptionTitle}>
-            {createdTicket ? (
+        {activeView === 'adminFeedback' ? (
+          <section className="admin-feedback" aria-label={text.feedbackAdminTitle}>
+            <div className="queue-heading">
+              <div>
+                <p className="eyebrow">{text.adminFeedbackTab.toLocaleUpperCase()}</p>
+                <h2>{text.feedbackAdminTitle}</h2>
+                <p>{text.feedbackAdminIntro}</p>
+              </div>
+              <div className="admin-feedback-actions">
+                <button
+                  className="button button-quiet"
+                  type="button"
+                  onClick={exportAdminFeedback}
+                  disabled={filteredAdminFeedback.length === 0}
+                >
+                  {text.feedbackAdminExport}
+                </button>
+                <button
+                  className="button button-secondary"
+                  type="button"
+                  onClick={loadAdminFeedback}
+                  disabled={adminFeedbackLoading}
+                >
+                  {adminFeedbackLoading ? text.feedbackAdminLoading : text.feedbackAdminRefresh}
+                </button>
+              </div>
+            </div>
+            <div className="queue-metrics">
+              <div className="queue-metric">
+                <span>{text.feedbackAdminCount}</span>
+                <strong>{adminFeedback.length}</strong>
+              </div>
+              <div className="queue-metric">
+                <span>{text.feedbackAdminAverage}</span>
+                <strong>{averageFeedbackRating}<small>/5</small></strong>
+              </div>
+            </div>
+            <div className="queue-toolbar admin-feedback-toolbar">
+              <label>
+                <span>{text.feedbackAdminSearch}</span>
+                <input
+                  type="search"
+                  value={adminFeedbackSearch}
+                  placeholder={text.feedbackAdminSearchPlaceholder}
+                  onChange={(event) => setAdminFeedbackSearch(event.target.value)}
+                />
+              </label>
+              <label>
+                <span>{text.feedbackAdminDepartmentFilter}</span>
+                <select
+                  value={adminFeedbackDepartment}
+                  onChange={(event) => setAdminFeedbackDepartment(event.target.value)}
+                >
+                  <option value="">{text.feedbackAdminDepartmentFilter}</option>
+                  {feedbackDepartments.map((department) => (
+                    <option key={department} value={department}>{department}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                <span>{text.feedbackAdminRating}</span>
+                <select
+                  value={adminFeedbackRating}
+                  onChange={(event) => setAdminFeedbackRating(event.target.value)}
+                >
+                  <option value="">{text.feedbackAdminRating}</option>
+                  {[5, 4, 3, 2, 1].map((value) => (
+                    <option key={value} value={value}>{value} / 5 ★</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            {adminFeedbackError && (
+              <p className="error-message queue-message" role="alert">{adminFeedbackError}</p>
+            )}
+            {adminFeedbackLoading && adminFeedback.length === 0 ? (
+              <p className="queue-empty">{text.feedbackAdminLoading}</p>
+            ) : adminFeedback.length === 0 ? (
+              <p className="queue-empty">{text.feedbackAdminEmpty}</p>
+            ) : filteredAdminFeedback.length === 0 ? (
+              <p className="queue-empty">{text.feedbackAdminNoMatches}</p>
+            ) : (
+              <div className="request-table-scroll">
+                <table className="request-table feedback-review-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">{text.feedbackAdminRequest}</th>
+                      <th scope="col">{text.feedbackAdminService}</th>
+                      <th scope="col">{text.feedbackAdminDepartment}</th>
+                      <th scope="col">{text.feedbackAdminSubmitted}</th>
+                      <th scope="col">{text.feedbackAdminRatingLabel}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredAdminFeedback.map((item) => {
+                      const isExpanded = expandedFeedbackId === item.id
+                      const submittedAt = item.submittedAt
+                        ? new Date(item.submittedAt).toLocaleString(language === 'rw' ? 'rw-RW' : 'en-RW')
+                        : '—'
+                      return (
+                        <Fragment key={item.id}>
+                          <tr
+                            className={`request-table-row${isExpanded ? ' expanded' : ''}`}
+                            tabIndex={0}
+                            aria-expanded={isExpanded}
+                            aria-label={`${text.feedbackAdminRequest} ${item.serviceRequestId}: ${item.rating}/5`}
+                            onClick={() => setExpandedFeedbackId(isExpanded ? null : item.id)}
+                            onKeyDown={(event) => {
+                              if (event.key === 'Enter' || event.key === ' ') {
+                                event.preventDefault()
+                                setExpandedFeedbackId(isExpanded ? null : item.id)
+                              }
+                            }}
+                          >
+                            <td>
+                              <span className="table-request-number">#{item.serviceRequestId}</span>
+                            </td>
+                            <td className="table-service-name">{item.serviceCategoryName}</td>
+                            <td>{item.departmentName}</td>
+                            <td>{submittedAt}</td>
+                            <td>
+                              <span className="feedback-rating" aria-label={`${item.rating} / 5`}>
+                                <span aria-hidden="true">{'★'.repeat(item.rating)}{'☆'.repeat(5 - item.rating)}</span>
+                                <strong>{item.rating}/5</strong>
+                              </span>
+                            </td>
+                          </tr>
+                          {isExpanded && (
+                            <tr className="request-detail-row" key={`${item.id}-details`}>
+                              <td colSpan="5">
+                                <div className="request-detail-panel feedback-detail-panel">
+                                  <div className="request-card-details">
+                                    <div>
+                                      <span>{text.feedbackAdminRequest}</span>
+                                      <strong>#{item.serviceRequestId}</strong>
+                                    </div>
+                                    <div>
+                                      <span>{text.feedbackAdminService}</span>
+                                      <strong>{item.serviceCategoryName}</strong>
+                                    </div>
+                                    <div>
+                                      <span>{text.feedbackAdminDepartment}</span>
+                                      <strong>{item.departmentName}</strong>
+                                    </div>
+                                    <div>
+                                      <span>{text.feedbackAdminSubmitted}</span>
+                                      <strong>{submittedAt}</strong>
+                                    </div>
+                                    <div>
+                                      <span>{text.feedbackAdminRatingLabel}</span>
+                                      <strong>{item.rating}/5</strong>
+                                    </div>
+                                  </div>
+                                  <div className="admin-feedback-comment">
+                                    <span>{text.feedbackAdminComment}</span>
+                                    <p>{item.comment || '—'}</p>
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </Fragment>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+        ) : activeView !== 'feedback' ? (
+          <section
+            className={activeView === 'frontDesk' ? 'front-desk-shell' : 'feedback-card reception-card'}
+            aria-label={activeView === 'frontDesk' ? text.frontDeskTitle : text.receptionTitle}
+          >
+            {activeView !== 'frontDesk' && createdTicket ? (
               <div className="ticket-result" role="status" aria-live="polite">
                 <div className="success-icon" aria-hidden="true">✓</div>
                 <p className="eyebrow">{text.ticketCreated}</p>
@@ -605,10 +1255,326 @@ function App() {
                   </div>
                 </div>
                 <p className="ticket-direction">{text.directTo}: <strong>{createdTicket.serviceRequest.departmentName}</strong></p>
+                <p className="field-hint">{text.feedbackIdHint}</p>
+                <button className="button button-secondary" type="button" onClick={useTicketForFeedback}>
+                  {text.useRequestForFeedback}
+                </button>
                 <button className="button button-primary" type="button" onClick={startAnotherCheckIn}>
                   {text.nextTaxpayer}
                 </button>
               </div>
+            ) : activeView === 'frontDesk' ? (
+              <section className="front-desk" aria-label={text.frontDeskTitle}>
+                <div className="queue-heading">
+                  <div>
+                    <p className="eyebrow">{text.frontDeskEyebrow}</p>
+                    <h2>{text.queueTitle}</h2>
+                    <p>{text.queueDescription}</p>
+                    <p className={`queue-auto-refresh${liveUpdatesConnected ? ' connected' : ' disconnected'}`}>
+                      {liveUpdatesConnected ? text.liveUpdatesConnected : text.liveUpdatesDisconnected}
+                      {queueLastUpdatedAt && (
+                        <> {text.queueLastUpdated(queueLastUpdatedAt.toLocaleTimeString(language === 'rw' ? 'rw-RW' : 'en-RW'))}</>
+                      )}
+                    </p>
+                  </div>
+                  <button
+                    className="button button-secondary"
+                    type="button"
+                    onClick={loadFrontDeskQueue}
+                    disabled={queueLoading}
+                  >
+                    {queueLoading ? text.queueLoading : text.refreshQueue}
+                  </button>
+                </div>
+
+                <div className="queue-metrics" aria-label={text.queueTitle}>
+                  <div className="queue-metric">
+                    <span>{text.incomingUnassigned}</span>
+                    <strong>{unassignedCount}</strong>
+                  </div>
+                  <div className="queue-metric">
+                    <span>{text.activeRequests}</span>
+                    <strong>{inProgressCount}</strong>
+                  </div>
+                  <div className="queue-metric">
+                    <span>{text.completedRequests}</span>
+                    <strong>{completedCount}</strong>
+                  </div>
+                </div>
+
+                <div className="queue-toolbar">
+                  <label className="queue-search">
+                    <span>{text.queueSearchLabel}</span>
+                    <input
+                      type="search"
+                      value={queueSearch}
+                      placeholder={text.queueSearchPlaceholder}
+                      onChange={(event) => setQueueSearch(event.target.value)}
+                    />
+                  </label>
+                  <label className="queue-select">
+                    <span>{text.departmentFilter}</span>
+                    <select value={queueDepartment} onChange={(event) => setQueueDepartment(event.target.value)}>
+                      <option value="">{text.departmentFilter}</option>
+                      {queueDepartments.map((department) => (
+                        <option key={department} value={department}>{department}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="queue-select">
+                    <span>{text.statusLabel}</span>
+                    <select value={queueStatus} onChange={(event) => setQueueStatus(event.target.value)}>
+                      <option value="">{text.allStatuses}</option>
+                      <option value="PENDING">{text.pendingStatus}</option>
+                      <option value="IN_PROGRESS">{text.inProgressStatus}</option>
+                      <option value="COMPLETED">{text.completedStatus}</option>
+                    </select>
+                  </label>
+                </div>
+
+                {queueError && <p className="error-message queue-message" role="alert">{queueError}</p>}
+                {queueNotice && <p className="success-message queue-message" role="status">{queueNotice}</p>}
+
+                <section className="staff-workload" aria-labelledby="staff-workload-title">
+                  <div className="staff-workload-heading">
+                    <h3 id="staff-workload-title">{text.staffLoadTitle}</h3>
+                    <p>{text.workloadNote}</p>
+                  </div>
+                  {staffWorkload.length > 0 ? (
+                    <div className="staff-load-list">
+                      {staffWorkload
+                        .filter(([departmentName]) => !queueDepartment || departmentName === queueDepartment)
+                        .map(([departmentName, staffName, count]) => (
+                        <div className={`staff-load-item${count === 0 ? ' available' : ''}`} key={`${departmentName}-${staffName}`}>
+                          <span className="staff-avatar" aria-hidden="true">{staffName.slice(0, 1).toLocaleUpperCase()}</span>
+                          <span className="staff-load-name">
+                            {staffName}{queueDepartment ? '' : ` · ${departmentName}`}
+                          </span>
+                          <span className="staff-load-count">{count === 0 ? text.freeLoad : text.activeLoad(count)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="staff-empty">{text.staffLoadEmpty}</p>
+                  )}
+                </section>
+
+                <div className="request-queue" aria-live="polite">
+                  {queueLoading && queueRequests.length === 0 ? (
+                    <p className="queue-empty">{text.queueLoading}</p>
+                  ) : queueError && queueRequests.length === 0 ? null : queueRequests.length === 0 ? (
+                    <p className="queue-empty">{text.noRequestsYet}</p>
+                  ) : filteredQueueRequests.length === 0 ? (
+                    <p className="queue-empty">{text.noQueueMatches}</p>
+                  ) : (
+                    <div className="request-table-scroll">
+                      <table className="request-table">
+                        <thead>
+                          <tr>
+                            <th scope="col">{text.requestNumber}</th>
+                            <th scope="col">{text.serviceLabel}</th>
+                            <th scope="col">{text.departmentFilter}</th>
+                            <th scope="col">{text.taxpayerTin}</th>
+                            <th scope="col">{text.arrivedLabel}</th>
+                            <th scope="col">{text.statusLabel}</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredQueueRequests.map((request) => {
+                    const staffName = request.assignedStaffName || ''
+                    const statusLabel = request.status === 'PENDING'
+                      ? text.pendingStatus
+                      : request.status === 'IN_PROGRESS'
+                        ? text.inProgressStatus
+                        : request.status === 'COMPLETED'
+                          ? text.completedStatus
+                          : request.status
+                    const isExpanded = expandedRequestId === request.id
+                    return (
+                      <Fragment key={request.id}>
+                          <tr
+                            className={`request-table-row${isExpanded ? ' expanded' : ''}`}
+                            tabIndex={0}
+                            aria-expanded={isExpanded}
+                            aria-label={`${text.requestNumber} ${request.id}: ${request.serviceCategoryName}`}
+                            onClick={() => setExpandedRequestId(isExpanded ? null : request.id)}
+                            onKeyDown={(event) => {
+                              if (event.key === 'Enter' || event.key === ' ') {
+                                event.preventDefault()
+                                setExpandedRequestId(isExpanded ? null : request.id)
+                              }
+                            }}
+                          >
+                            <td>
+                              <span className="table-request-number">
+                                #{request.id}
+                                {newRequestIds.includes(request.id) && request.status === 'PENDING' && (
+                                  <span className="new-arrival-badge">{text.newArrival}</span>
+                                )}
+                              </span>
+                            </td>
+                            <td className="table-service-name">{request.serviceCategoryName}</td>
+                            <td>{request.departmentName}</td>
+                            <td>{request.taxpayerTin || '—'}</td>
+                            <td>{request.createdAt
+                              ? new Date(request.createdAt).toLocaleString(language === 'rw' ? 'rw-RW' : 'en-RW')
+                              : '—'}</td>
+                            <td>
+                              <span className={`request-status status-${String(request.status).toLowerCase().replaceAll('_', '-')}`}>
+                                {statusLabel}
+                              </span>
+                            </td>
+                          </tr>
+                          {isExpanded && (
+                            <tr className="request-detail-row" key={`${request.id}-details`}>
+                              <td colSpan="6">
+                                <div className="request-detail-panel">
+                                  <div className="request-card-details">
+                                    <div>
+                                      <span>{text.requestNumber}</span>
+                                      <strong>#{request.id}</strong>
+                                    </div>
+                                    <div>
+                                      <span>{text.serviceLabel}</span>
+                                      <strong>{request.serviceCategoryName}</strong>
+                                    </div>
+                                    <div>
+                                      <span>{text.departmentFilter}</span>
+                                      <strong>{request.departmentName}</strong>
+                                    </div>
+                                    <div>
+                                      <span>{text.taxpayerTin}</span>
+                                      <strong>{request.taxpayerTin || '—'}</strong>
+                                    </div>
+                                    <div>
+                                      <span>{text.arrivedLabel}</span>
+                                      <strong>{request.createdAt
+                                        ? new Date(request.createdAt).toLocaleString(language === 'rw' ? 'rw-RW' : 'en-RW')
+                                        : '—'}</strong>
+                                    </div>
+                                    <div>
+                                      <span>{text.statusLabel}</span>
+                                      <strong>{statusLabel}</strong>
+                                    </div>
+                                  </div>
+                                  {request.status === 'PENDING' && !request.assignedStaffName && (
+                                    <p className="pending-assignment-notice">{text.pendingAssignment}</p>
+                                  )}
+                                  {request.reason && <p className="request-reason">{request.reason}</p>}
+                                  {request.nonCompletionReason && (
+                                    <p className="request-follow-up"><strong>{text.returnReasonLabel}:</strong> {request.nonCompletionReason}</p>
+                                  )}
+                                  <div className="request-assignment">
+                            <label htmlFor={`staff-${request.id}`}>{text.assignedStaff}</label>
+                            <div className="assignment-row">
+                            <input
+                              id={`staff-${request.id}`}
+                              type="text"
+                              maxLength="120"
+                              list={`available-staff-${request.id}`}
+                              value={staffDrafts[request.id] ?? staffName}
+                              placeholder={text.staffNamePlaceholder}
+                              onChange={(event) => setStaffDrafts((current) => ({
+                                ...current,
+                                [request.id]: event.target.value,
+                              }))}
+                              disabled={request.status === 'COMPLETED'}
+                            />
+                            <datalist id={`available-staff-${request.id}`}>
+                              {staffWorkload
+                                .filter(([departmentName]) => departmentName === request.departmentName)
+                                .map(([departmentName, name, count]) => (
+                                  <option key={`${departmentName}-${name}`} value={name} label={text.activeLoad(count)} />
+                                ))}
+                            </datalist>
+                            {(request.status === 'PENDING' || request.status === 'IN_PROGRESS') && (
+                              <button
+                                className="button button-secondary"
+                                type="button"
+                                onClick={() => assignRequest(request)}
+                                disabled={queueActionId === request.id}
+                              >
+                                {queueActionId === request.id ? text.assigning : text.assignAndStart}
+                              </button>
+                            )}
+                          </div>
+                          <p className="field-hint">{text.staffNameHint}</p>
+                          {request.status === 'IN_PROGRESS' && staffName && (
+                            <p className="assignment-workload">
+                              {text.assignedStaff}: <strong>{staffName}</strong> · {
+                                text.activeLoad(staffWorkload.find(
+                                  ([departmentName, name]) => departmentName === request.departmentName && name === staffName,
+                                )?.[2] || 0)
+                              }
+                            </p>
+                          )}
+                        </div>
+                        {request.status === 'IN_PROGRESS' && (
+                          <div className="request-actions">
+                            <button
+                              className="button button-primary"
+                              type="button"
+                              onClick={() => recordQueueOutcome(request, 'COMPLETED')}
+                              disabled={queueActionId === request.id}
+                            >
+                              {text.completionAction}
+                            </button>
+                            {returnRequestId === request.id ? (
+                              <div className="return-request-form">
+                                <label htmlFor={`return-reason-${request.id}`}>{text.returnReasonLabel}</label>
+                                <textarea
+                                  id={`return-reason-${request.id}`}
+                                  rows="2"
+                                  maxLength="1000"
+                                  value={returnReasons[request.id] || ''}
+                                  placeholder={text.returnReasonPlaceholder}
+                                  onChange={(event) => setReturnReasons((current) => ({
+                                    ...current,
+                                    [request.id]: event.target.value,
+                                  }))}
+                                />
+                                <div className="return-request-actions">
+                                  <button
+                                    className="button button-secondary"
+                                    type="button"
+                                    onClick={() => recordQueueOutcome(request, 'NOT_COMPLETED', returnReasons[request.id])}
+                                    disabled={queueActionId === request.id}
+                                  >
+                                    {text.saveReturn}
+                                  </button>
+                                  <button
+                                    className="button button-quiet"
+                                    type="button"
+                                    onClick={() => setReturnRequestId(null)}
+                                  >
+                                    {text.cancel}
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <button
+                                className="button button-quiet"
+                                type="button"
+                                onClick={() => setReturnRequestId(request.id)}
+                              >
+                                {text.returnToQueue}
+                              </button>
+                            )}
+                          </div>
+                        )}
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
+                    )
+                  })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </section>
             ) : (
               <>
                 <div className="card-heading">
@@ -643,46 +1609,80 @@ function App() {
                   </div>
 
                   <div className="form-field">
-                    <label htmlFor="service-search">{text.serviceSearch}</label>
-                    <input
-                      id="service-search"
-                      name="serviceSearch"
-                      type="search"
-                      placeholder={text.serviceSearchPlaceholder}
-                      value={serviceSearch}
-                      onChange={(event) => {
-                        setServiceSearch(event.target.value)
-                        setSelectedCategoryId('')
-                        setReceptionError('')
-                      }}
-                      disabled={categoriesLoading || categoriesLoadFailed}
-                    />
-                    <label className="select-label" htmlFor="service-category">{text.serviceType}</label>
-                    <select
-                      id="service-category"
-                      name="serviceCategoryId"
-                      value={selectedCategoryId}
-                      onChange={(event) => {
-                        setSelectedCategoryId(event.target.value)
-                        setReceptionError('')
-                      }}
-                      disabled={categoriesLoading || categoriesLoadFailed || categories.length === 0}
-                      required
-                    >
-                      <option value="">
-                        {categoriesLoading ? text.categoriesLoading : text.chooseService}
-                      </option>
-                      {filteredCategories.map((category) => (
-                        <option
-                          key={category.id}
-                          value={category.id}
-                          disabled={!category.defaultDepartmentId || !category.defaultDepartmentName}
-                        >
-                          {category.name} — {category.defaultDepartmentName || text.missingDepartment}
-                          {category.subUnit ? ` — ${category.subUnit}` : ''}
-                        </option>
-                      ))}
-                    </select>
+                    <label htmlFor="service-search">{text.serviceType}</label>
+                    <div className="service-picker">
+                      <input
+                        id="service-search"
+                        type="search"
+                        placeholder={categoriesLoading ? text.categoriesLoading : text.serviceSearchPlaceholder}
+                        value={serviceSearch}
+                        onChange={(event) => {
+                          setServiceSearch(event.target.value)
+                          setSelectedCategoryId('')
+                          setActiveServiceIndex(0)
+                          setServiceMenuOpen(true)
+                          setReceptionError('')
+                        }}
+                        onFocus={openServicePicker}
+                        onClick={openServicePicker}
+                        onBlur={() => setServiceMenuOpen(false)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'ArrowDown' && filteredCategories.length > 0) {
+                            event.preventDefault()
+                            setServiceMenuOpen(true)
+                            setActiveServiceIndex((index) => Math.min(index + 1, filteredCategories.length - 1))
+                          } else if (event.key === 'ArrowUp' && filteredCategories.length > 0) {
+                            event.preventDefault()
+                            setServiceMenuOpen(true)
+                            setActiveServiceIndex((index) => Math.max(index - 1, 0))
+                          } else if (event.key === 'Enter' && serviceMenuOpen && filteredCategories.length > 0) {
+                            event.preventDefault()
+                            const category = filteredCategories[Math.min(activeServiceIndex, filteredCategories.length - 1)]
+                            selectServiceCategory(category)
+                          } else if (event.key === 'Escape') {
+                            setServiceMenuOpen(false)
+                          }
+                        }}
+                        disabled={categoriesLoading || categoriesLoadFailed}
+                        autoComplete="off"
+                        role="combobox"
+                        aria-autocomplete="list"
+                        aria-expanded={serviceMenuOpen && filteredCategories.length > 0}
+                        aria-controls="service-category-options"
+                        aria-activedescendant={
+                          serviceMenuOpen && filteredCategories.length > 0
+                            ? `service-option-${filteredCategories[Math.min(activeServiceIndex, filteredCategories.length - 1)].id}`
+                            : undefined
+                        }
+                        aria-invalid={Boolean(receptionError && !selectedCategoryId)}
+                        required
+                      />
+                      {serviceMenuOpen && filteredCategories.length > 0 && (
+                        <ul className="service-options" id="service-category-options" role="listbox">
+                          {filteredCategories.map((category, index) => (
+                            <li key={category.id}>
+                              <button
+                                id={`service-option-${category.id}`}
+                                className={index === activeServiceIndex ? 'active' : ''}
+                                type="button"
+                                role="option"
+                                aria-selected={String(category.id) === selectedCategoryId}
+                                disabled={!category.defaultDepartmentId || !category.defaultDepartmentName}
+                                onMouseDown={(event) => event.preventDefault()}
+                                onMouseEnter={() => setActiveServiceIndex(index)}
+                                onClick={() => selectServiceCategory(category)}
+                              >
+                                <strong>{category.name}</strong>
+                                <span>
+                                  {category.defaultDepartmentName || text.missingDepartment}
+                                  {category.subUnit ? ` · ${category.subUnit}` : ''}
+                                </span>
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
                     {categoriesLoadFailed && (
                       <p className="error-message" role="alert">{text.categoryFetchFailed}</p>
                     )}
@@ -694,7 +1694,7 @@ function App() {
                         {catalogNeedsRestart ? text.catalogNeedsRestart : text.noCategories}
                       </p>
                     )}
-                    {!categoriesLoadFailed && !categoriesLoading && categories.length > 0 && filteredCategories.length === 0 && (
+                    {!categoriesLoadFailed && !categoriesLoading && categories.length > 0 && !selectedCategoryId && filteredCategories.length === 0 && (
                       <p className="field-hint">{text.noServicesMatch}</p>
                     )}
                   </div>
@@ -787,6 +1787,7 @@ function App() {
                 <p className="field-hint" id="request-hint">
                   {text.verifyHint}
                 </p>
+                <p className="field-hint">{text.feedbackIdHint}</p>
                 {verificationError && (
                   <p className="error-message" id="verification-error" role="alert">
                     {verificationError}
@@ -878,14 +1879,21 @@ function App() {
         )}
 
         <p className="privacy-note">
-          {activeView === 'reception' ? text.receptionNote : text.privacy}
+          {activeView === 'reception'
+            ? text.receptionNote
+            : activeView === 'frontDesk'
+              ? text.queuePrivacy
+              : activeView === 'adminFeedback'
+                ? text.feedbackAdminPrivacy
+              : text.privacy}
         </p>
-      </main>
 
       <footer className="site-footer">
         <span>{text.footer}</span>
         <span>{text.footerSystem}</span>
       </footer>
+      </main>
+      </div>
     </div>
   )
 }

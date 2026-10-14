@@ -92,4 +92,18 @@ class FeedbackControllerTest {
 				.andExpect(jsonPath("$.id").value(feedback.getId()))
 				.andExpect(jsonPath("$.rating").value(4));
 	}
+
+	@Test
+	void listsFeedbackNewestFirstWithRequestDepartmentAndService() throws Exception {
+		Feedback feedback = feedbackRepository.save(new Feedback(completedRequest, 4, "Good service"));
+
+		mockMvc.perform(get("/api/v1/feedback"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$[0].id").value(feedback.getId()))
+				.andExpect(jsonPath("$[0].serviceRequestId").value(completedRequest.getId()))
+				.andExpect(jsonPath("$[0].serviceCategoryName").value("Taxpayer Support"))
+				.andExpect(jsonPath("$[0].departmentName").value("Taxpayer Services"))
+				.andExpect(jsonPath("$[0].rating").value(4))
+				.andExpect(jsonPath("$[0].comment").value("Good service"));
+	}
 }

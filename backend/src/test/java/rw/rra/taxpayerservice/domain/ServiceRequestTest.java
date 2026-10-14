@@ -26,12 +26,24 @@ class ServiceRequestTest {
 	@Test
 	void pendingRequestCanRecordAnUpdateAndStayPending() {
 		ServiceRequest request = createRequest();
+		request.assignTo("Aline");
 
 		request.recordPendingUpdate("Waiting for a supporting document");
 
 		assertEquals(ServiceRequestStatus.PENDING, request.getStatus());
+		assertNull(request.getAssignedStaffName());
 		assertEquals("Waiting for a supporting document", request.getNonCompletionReason());
 		assertNull(request.getOutcomeRecordedAt());
+	}
+
+	@Test
+	void assigningPendingRequestStartsWorkForNamedStaffMember() {
+		ServiceRequest request = createRequest();
+
+		request.assignTo("  Aline  ");
+
+		assertEquals(ServiceRequestStatus.IN_PROGRESS, request.getStatus());
+		assertEquals("Aline", request.getAssignedStaffName());
 	}
 
 	@Test

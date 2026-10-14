@@ -1,5 +1,6 @@
 package rw.rra.taxpayerservice.domain;
 
+import java.util.List;
 import java.util.Optional;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -41,5 +42,12 @@ public class FeedbackService {
 		Feedback feedback = feedbackRepository.findByServiceRequestId(serviceRequestId)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Feedback not found"));
 		return FeedbackResponse.from(feedback);
+	}
+
+	@Transactional(readOnly = true)
+	public List<FeedbackResponse> findAll() {
+		return feedbackRepository.findAllByOrderBySubmittedAtDesc().stream()
+				.map(FeedbackResponse::from)
+				.toList();
 	}
 }

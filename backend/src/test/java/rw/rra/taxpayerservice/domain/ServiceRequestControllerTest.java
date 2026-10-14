@@ -2,7 +2,9 @@ package rw.rra.taxpayerservice.domain;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.request;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.hamcrest.Matchers.nullValue;
 
@@ -109,11 +111,20 @@ class ServiceRequestControllerTest {
 				.andExpect(status().isCreated());
 		Long requestId = serviceRequestRepository.findAll().get(0).getId();
 
+		mockMvc.perform(put("/api/v1/service-requests/{id}/assignment", requestId)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"staffName\":\"Aline\"}"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.status").value("IN_PROGRESS"))
+				.andExpect(jsonPath("$.assignedStaffName").value("Aline"))
+				.andExpect(jsonPath("$.assignedAt").isNotEmpty());
+
 		mockMvc.perform(post("/api/v1/service-requests/{id}/outcome", requestId)
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("{\"status\":\"NOT_COMPLETED\",\"nonCompletionReason\":\"Waiting for a document\"}"))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.status").value("PENDING"))
+				.andExpect(jsonPath("$.assignedStaffName").value(nullValue()))
 				.andExpect(jsonPath("$.nonCompletionReason").value("Waiting for a document"))
 				.andExpect(jsonPath("$.outcomeRecordedAt").value(nullValue()));
 
@@ -124,6 +135,57 @@ class ServiceRequestControllerTest {
 				.andExpect(jsonPath("$.status").value("COMPLETED"))
 				.andExpect(jsonPath("$.nonCompletionReason").value(nullValue()))
 				.andExpect(jsonPath("$.outcomeRecordedAt").isNotEmpty());
+	}
+
+	@Test
+	void listsRequestsForFrontDeskWithTaxpayerAndAssignmentFields() throws Exception {
+		mockMvc.perform(post("/api/v1/service-requests")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(requestJson()))
+				.andExpect(status().isCreated());
+
+		Thread.sleep(10);
+		mockMvc.perform(post("/api/v1/service-requests")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(requestJson()))
+				.andExpect(status().isCreated());
+		Long newestRequestId = serviceRequestRepository.findAll().stream()
+				.map(ServiceRequest::getId)
+				.max(Long::compareTo)
+				.orElseThrow();
+
+		mockMvc.perform(get("/api/v1/service-requests"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$[0].id").value(newestRequestId))
+				.andExpect(jsonPath("$[0].taxpayerTin").value("123456789"))
+				.andExpect(jsonPath("$[0].serviceCategoryName").value("Tax filing"))
+				.andExpect(jsonPath("$[0].assignedStaffName").value(nullValue()));
+	}
+
+	@Test
+	void opensServerSentEventsStreamForFrontDeskUpdates() throws Exception {
+		mockMvc.perform(get("/api/v1/service-requests/events")
+				.accept(MediaType.TEXT_EVENT_STREAM))
+				.andExpect(status().isOk())
+				.andExpect(request().asyncStarted());
+	}
+
+	@Test
+	void doesNotAllowAssignmentWhenRequestIsCompleted() throws Exception {
+		mockMvc.perform(post("/api/v1/service-requests")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(requestJson()))
+				.andExpect(status().isCreated());
+		Long requestId = serviceRequestRepository.findAll().get(0).getId();
+		mockMvc.perform(post("/api/v1/service-requests/{id}/outcome", requestId)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"status\":\"COMPLETED\"}"))
+				.andExpect(status().isOk());
+
+		mockMvc.perform(put("/api/v1/service-requests/{id}/assignment", requestId)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"staffName\":\"Aline\"}"))
+				.andExpect(status().isConflict());
 	}
 
 	@Test

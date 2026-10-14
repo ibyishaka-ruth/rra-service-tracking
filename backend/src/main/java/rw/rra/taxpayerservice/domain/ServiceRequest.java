@@ -49,6 +49,11 @@ public class ServiceRequest {
 	@Column(name = "non_completion_reason", length = 1000)
 	private String nonCompletionReason;
 
+	@Column(name = "assigned_staff_name", length = 120)
+	private String assignedStaffName;
+
+	private Instant assignedAt;
+
 	@Column(nullable = false, updatable = false)
 	private Instant createdAt;
 
@@ -84,7 +89,22 @@ public class ServiceRequest {
 		}
 		this.nonCompletionReason = reason.trim();
 		this.status = ServiceRequestStatus.PENDING;
+		this.assignedStaffName = null;
+		this.assignedAt = null;
 		this.outcomeRecordedAt = null;
+	}
+
+	public void assignTo(String staffName) {
+		if (this.status != ServiceRequestStatus.PENDING && this.status != ServiceRequestStatus.IN_PROGRESS) {
+			throw new IllegalStateException("Only an open service request can be assigned");
+		}
+		if (staffName == null || staffName.isBlank()) {
+			throw new IllegalArgumentException("Staff name is required");
+		}
+		this.assignedStaffName = staffName.trim();
+		this.assignedAt = Instant.now();
+		this.nonCompletionReason = null;
+		this.status = ServiceRequestStatus.IN_PROGRESS;
 	}
 
 	public Long getId() {
@@ -113,6 +133,14 @@ public class ServiceRequest {
 
 	public String getNonCompletionReason() {
 		return nonCompletionReason;
+	}
+
+	public String getAssignedStaffName() {
+		return assignedStaffName;
+	}
+
+	public Instant getAssignedAt() {
+		return assignedAt;
 	}
 
 	public Instant getCreatedAt() {

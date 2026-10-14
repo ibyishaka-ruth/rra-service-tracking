@@ -5,5 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ServiceRequestRepository extends JpaRepository<ServiceRequest, Long> {
 
+	List<ServiceRequest> findAllByOrderByCreatedAtDesc();
+
 	List<ServiceRequest> findByVisit_IdOrderByCreatedAtDesc(Long visitId);
 }

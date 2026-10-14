@@ -1,6 +1,7 @@
 package rw.rra.taxpayerservice.domain;
 
 import jakarta.validation.Valid;
+import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -24,6 +25,11 @@ public class FeedbackController {
 	@ResponseStatus(HttpStatus.CREATED)
 	public FeedbackResponse create(@Valid @RequestBody FeedbackRequest request) {
 		return feedbackService.create(request);
+	}
+
+	@GetMapping
+	public List<FeedbackResponse> findAll() {
+		return feedbackService.findAll();
 	}
 
 	@GetMapping("/service-request/{serviceRequestId}")

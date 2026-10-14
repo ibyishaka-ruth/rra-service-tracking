@@ -5,6 +5,7 @@ import java.time.Instant;
 public record ServiceRequestResponse(
 		Long id,
 		Long visitId,
+		String taxpayerTin,
 		Long serviceCategoryId,
 		String serviceCode,
 		String serviceCategoryName,
@@ -13,6 +14,8 @@ public record ServiceRequestResponse(
 		String departmentName,
 		String reason,
 		ServiceRequestStatus status,
+		String assignedStaffName,
+		Instant assignedAt,
 		String nonCompletionReason,
 		Instant createdAt,
 		Instant outcomeRecordedAt) {
@@ -21,6 +24,7 @@ public record ServiceRequestResponse(
 		return new ServiceRequestResponse(
 				request.getId(),
 				request.getVisit().getId(),
+				request.getVisit().getTaxpayer().getTin(),
 				request.getServiceCategory().getId(),
 				request.getServiceCategory().getRoutingCode(),
 				request.getServiceCategory().getName(),
@@ -29,6 +33,8 @@ public record ServiceRequestResponse(
 				request.getDepartment().getName(),
 				request.getReason(),
 				request.getStatus(),
+				request.getAssignedStaffName(),
+				request.getAssignedAt(),
 				request.getNonCompletionReason(),
 				request.getCreatedAt(),
 				request.getOutcomeRecordedAt());
